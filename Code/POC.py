@@ -28,6 +28,7 @@ def preprocess_data(df):
     df["Age"] = pd.to_numeric(df["Age"], errors="coerce")
     df["Age"].fillna(df["Age"].mean(), inplace=True)  # Missing value are filled with media
     return df
+        
 #Step 3: SMPC initialization
 def setup_smpc():
     alice = sy.Domain(name="alice")
@@ -77,7 +78,7 @@ def apply_l_diversity(data_df, quasi_identifiers, sensitive_attribute, l_value):
     print(f" L-diversity row: {l_diverse_data.count()}")
     return l_diverse_data
 
-#Step 7: Re-identification risk estimation
+#Step 7: Re-identification risk evaluation
 def reidentification_risk(original_df, transformed_df, quasi_identifiers):
     df_copy = original_df.copy()
     df_copy.columns = [col.lower().replace(" ", "_") for col in df_copy.columns]
