@@ -77,7 +77,7 @@ def apply_l_diversity(data_df, quasi_identifiers, sensitive_attribute, l_value):
     print(f" L-diversity row: {l_diverse_data.count()}")
     return l_diverse_data
 
-#Step 8: Re-identification risk estimation
+#Step 7: Re-identification risk estimation
 def reidentification_risk(original_df, transformed_df, quasi_identifiers):
     df_copy = original_df.copy()
     df_copy.columns = [col.lower().replace(" ", "_") for col in df_copy.columns]
@@ -92,7 +92,7 @@ def reidentification_risk(original_df, transformed_df, quasi_identifiers):
     print(f" Re-identification Risk: {reid_rate:.4f} ({len(merged)} matched out of {len(trans_pd)})")
     return reid_rate
 
-#Step 12: Main function
+#Step 8: Main function
 def main():
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
     df = load_data(url)
