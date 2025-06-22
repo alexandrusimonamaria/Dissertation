@@ -1,4 +1,8 @@
+!pip install syft==0.8.2
+!pip install numpy pandas scikit-learn pySyft
 
+import syft as sy
+import torch
 
 import pandas as pd
 import numpy as np
