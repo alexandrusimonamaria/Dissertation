@@ -49,11 +49,11 @@ def secure_average(income_tensor):
     return overall_avg
 
 #Step 5: K-anonymity
-def apply_k_anonymity(data_df, quasi_identifiers, k_value):
+def apply_k_anonymity(data_df, quasi_identifiers, k_value, gen_base):
     print(f" K-anonymity with k={k_value} on: {quasi_identifiers}")
     processed_data = data_df.withColumn(
         "age_generalized",
-         F.floor(F.col("age")/10)*10
+         F.floor(F.col("age")/gen_base)*gen_base
     )
     # Group by quasi-identifiers and count group sizes
     k_anonymous_data = processed_data.groupBy(
@@ -63,7 +63,7 @@ def apply_k_anonymity(data_df, quasi_identifiers, k_value):
     .join(processed_data, on=[qi if qi != "age" else "age_generalized" for qi in quasi_identifiers], how="inner") \
     .drop("group_size", "age") \
     .withColumnRenamed("age_generalized", "age")
-    print(f" K-anonimity row: {k_anonymous_data.count()}")
+    print(f" K-anonymity row: {k_anonymous_data.count()}")
     return k_anonymous_data
 
 #Step 6: L-diversity
@@ -78,7 +78,7 @@ def apply_l_diversity(data_df, quasi_identifiers, sensitive_attribute, l_value):
     print(f" L-diversity row: {l_diverse_data.count()}")
     return l_diverse_data
 
-#Step 7: Re-identification risk evaluation
+#Step 7 Re-identification risk estimation
 def reidentification_risk(original_df, transformed_df, quasi_identifiers):
     df_copy = original_df.copy()
     df_copy.columns = [col.lower().replace(" ", "_") for col in df_copy.columns]
@@ -95,7 +95,8 @@ def reidentification_risk(original_df, transformed_df, quasi_identifiers):
 
 #Step 8: Main function
 def main():
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
+    #url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
+    url = "/content/drive/MyDrive/adult.data"
     df = load_data(url)
     df = preprocess_data(df)
 
@@ -133,11 +134,27 @@ def main():
     # K-anonymity + L-diversity
     QUASI_IDENTIFIERS = ["age", "workclass"]
     SENSITIVE_ATTRIBUTE = "income"
-    k_anonymous_data = apply_k_anonymity(spark_df, QUASI_IDENTIFIERS, k_value=5)
-    l_diverse_data = apply_l_diversity(k_anonymous_data, QUASI_IDENTIFIERS, SENSITIVE_ATTRIBUTE, l_value=2)
+    #k_anonymous_data = apply_k_anonymity(spark_df, QUASI_IDENTIFIERS, k_value=5)
+
+    print("\n Generalization with base = 10")
+    k_anonymous_data_10 = apply_k_anonymity(spark_df, QUASI_IDENTIFIERS, k_value=5, gen_base=10)
+    l_diverse_data10 = apply_l_diversity(k_anonymous_data_10, QUASI_IDENTIFIERS, SENSITIVE_ATTRIBUTE, l_value=2)
 
     # Convert income column in Spark DataFrame to numeric
-    l_diverse_data_numeric_income = l_diverse_data.withColumn("income_numeric", F.when(F.col("income") == ">50K", 1.0).otherwise(0.0)).drop("income").withColumnRenamed("income_numeric", "income")
+    l_diverse_data_numeric_income_10 = l_diverse_data10.withColumn("income_numeric", F.when(F.col("income") == ">50K", 1.0).otherwise(0.0)).drop("income").withColumnRenamed("income_numeric", "income")
+
+    # Re-identification risk
+    reidentification_risk(df, l_diverse_data_numeric_income_10, QUASI_IDENTIFIERS)
+     
+    print("\n Generalization with base = 20") 
+    k_anonymous_data_20 = apply_k_anonymity(spark_df, QUASI_IDENTIFIERS, k_value=5, gen_base=20)
+    l_diverse_data20 = apply_l_diversity(k_anonymous_data_20, QUASI_IDENTIFIERS, SENSITIVE_ATTRIBUTE, l_value=2)
+
+    # Convert income column in Spark DataFrame to numeric
+    l_diverse_data_numeric_income_20 = l_diverse_data20.withColumn("income_numeric", F.when(F.col("income") == ">50K", 1.0).otherwise(0.0)).drop("income").withColumnRenamed("income_numeric", "income")
+
+    # Re-identification risk
+    reidentification_risk(df, l_diverse_data_numeric_income_20, QUASI_IDENTIFIERS)
 
     # Display the schema of the modified Spark DataFrame to confirm the type change
     #print("Schema of L-diversity data with numeric income:")
@@ -148,9 +165,6 @@ def main():
     # Check columns before training simulation
     #print("Columns in L-diversity data with numeric income:")
     #print(l_diverse_data_numeric_income.columns)
-
-    # Re-identification risk
-    reidentification_risk(df, l_diverse_data_numeric_income, QUASI_IDENTIFIERS)
 
     spark.stop()
 
